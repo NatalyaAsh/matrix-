@@ -1,0 +1,117 @@
+.PHONY: all test s21_matrix.a clang clean cppcheck rebuild gcov_report leaks
+
+NAME_SYS = $(shell uname -s)
+
+ifeq ($(NAME_SYS), Darwin)
+  FLAGS_CHECK = -lcheck -lm -lpthread
+	OPEN = open
+else ifeq ($(NAME_SYS), Linux)
+	FLAGS_CHECK = -lcheck -lsubunit -lm -lpthread -lrt
+	OPEN = xdg-open
+endif
+
+FLAG = -Wall -Wextra -Werror -std=gnu11
+FLAG_TEST = -fprofile-arcs -ftest-coverage -pedantic -std=gnu11
+# LINUX=-lsubunit -lrt
+LIBS=-lcheck -lm -lpthread
+CC=gcc
+
+TARGET_A = s21_matrix.a
+TARGET_C = internal/funcs/*.c internal/utils/*.c
+TARGET_O = *.o
+TARGET_TEST = unit_test
+
+all: clean $(TARGET_A)
+
+clean: 
+	@echo "clean objects..."
+	rm -rf *.o
+	@echo "clean library..."
+	rm -rf *.a
+	@echo "clean test..."
+	rm -rf *.gcda
+	rm -rf *.gcno
+	rm -rf *.info
+	rm -rf test
+	rm -rf report
+	rm -rf *.dSYM
+	@echo "clean unit test..."	
+	rm -rf unit_test	
+
+$(TARGET_A):
+	@$(CC) -c $(FLAGS) $(TARGET_C)
+	ar rcs $(TARGET_A) $(TARGET_O)
+	ranlib $(TARGET_A) 
+	@echo "s21_matrix.a compiled successfully"
+
+test: clean s21_matrix.a
+	@$(CC) $(FLAGS) $(FLAGS_TEST) -g tests/*.c $(TARGET_A) -o $(TARGET_TEST) $(FLAGS_CHECK) -lgcov
+	@echo "running tests..."
+	@./$(TARGET_TEST)
+
+# gcov_report: clean s21_matrix.a
+# 	@$(CC) $(FLAGS) $(FLAGS_TEST) -g tests/*.c $(TARGET_A) -o $(TARGET_TEST) $(FLAGS_CHECK)
+# 	@echo "open report..."
+# #	@./$(TARGET_TEST)
+# #	@geninfo --ignore-errors gcov -o $(TARGET_TEST).info .
+# #	lcov -t "unit_test" -o $(TARGET_TEST).info -c -d .
+# #	@genhtml -o report_full $(TARGET_TEST).info
+# #	@$(OPEN_GCOV) report_full/index.html
+# 	./unit_test
+# 	lcov -t "unit_test" -o test.info -c -d .
+# 	genhtml -o report test.info
+# 	$(OPEN) report/index.html
+
+gcov_report: clean s21_matrix.a
+	@$(CC) $(FLAGS) $(FLAGS_TEST) -g tests/*.c $(TARGET_A) -o $(TARGET_TEST) $(FLAGS_CHECK)
+	@echo "open report..."
+	./$(TARGET_TEST)
+#	lcov -t "unit_test" -o test.info -c -d .
+	
+# 	@geninfo --ignore-errors gcov -o test.info .
+# 	genhtml -o report test.info
+# 	xdg-open report/index.html
+
+
+
+# rebuild: all
+
+# clang:
+# 	clang-format -i $(TARGET_C) *.h
+# 	clang-format -i tests/*.c tests/*.h
+
+# clang:
+# 	@clang-format -n $(TARGET_C) *.h tests/*.c tests/*.h
+
+# format:
+# 	@clang-format -i $(TARGET_C) *.h tests/*.c tests/*.h
+
+# leaks:
+# 	@leaks -atExit -- ./s21_unit_test_full
+
+# valgrind: test
+# 	@echo "Running valgrind..."
+# 	@valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./$(TARGET_TEST)
+
+#   for Linux
+#	valgrind --tool=memcheck --leak-check=yes ./$(TARGET_TEST)
+# 	for Mac
+#	leaks -atExit -- ./$(TARGET_TEST)
+
+
+# cppcheck:
+# 	@echo "Running Cppcheck..."
+# 	@cppcheck --enable=all --std=c11 --platform=unix64 --suppress=missingIncludeSystem --suppress=constVariablePointer:tests/test_s21_trim.c --suppress=checkersReport $(TARGET_C) tests/*.c *.h tests/*.h
+	
+# miniverter:
+# 	@bash ../materials/build/run.sh
+
+# .PHONY: s21_decimal.a test gcov_report clean_obj clean_lib clean_test clean rebuild clang format cppcheck leaks valgrind miniverter
+
+clean_test:
+	rm -rf *.gcda
+	rm -rf *.gcno
+	rm -rf *.info
+	rm -rf test
+	rm -rf report
+	rm -rf *.dSYM
